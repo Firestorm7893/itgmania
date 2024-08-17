@@ -5,6 +5,10 @@
 #include "RageUtil.h"
 #include "SextetUtils.h"
 
+#ifdef WINDOWS
+#include "windows.h"
+#endif
+
 #include <cstdint>
 #include <cstring>
 
@@ -20,10 +24,19 @@ namespace
 	{
 	protected:
 		std::uint8_t lastOutput[FULL_SEXTET_COUNT];
-		RageFile * out;
+
+#ifdef WINDOWS
+		HANDLE out;
+#elif
+		RageFile* out;
+#endif
 
 	public:
+#ifdef WINDOWS
+		Impl(HANDLE file) {
+#elif
 		Impl(RageFile * file) {
+#endif
 			out = file;
 
 			// Ensure a non-match the first time
@@ -31,11 +44,15 @@ namespace
 		}
 
 		virtual ~Impl() {
-			if(out != nullptr)
+			if (out != nullptr)
 			{
+#ifdef WINDOWS
+				CloseHandle(out);
+#elif
 				out->Flush();
 				out->Close();
 				SAFE_DELETE(out);
+#endif
 			}
 		}
 
@@ -46,20 +63,32 @@ namespace
 			packLine(buffer, ls);
 
 			// Only write if the message has changed since the last write.
-			if(memcmp(buffer, lastOutput, FULL_SEXTET_COUNT) != 0)
+			if (memcmp(buffer, lastOutput, FULL_SEXTET_COUNT) != 0)
 			{
-				if(out != nullptr)
+				if (out != nullptr)
 				{
+#ifdef WINDOWS
+					DWORD cbWritten;
+					bool fSuccess = WriteFile(
+						out,                  // pipe handle 
+						buffer,             // message 
+						FULL_SEXTET_COUNT,              // message length 
+						&cbWritten,             // bytes written 
+						NULL);                  // not overlapped 
+
+#elif
 					out->Write(buffer, FULL_SEXTET_COUNT);
 					out->Flush();
+#endif
+
 				}
 
 				// Remember last message
 				memcpy(lastOutput, buffer, FULL_SEXTET_COUNT);
 			}
 		}
-	};
-}
+		};
+	}
 
 
 // LightsDriver_SextetStream interface
@@ -74,15 +103,15 @@ LightsDriver_SextetStream::LightsDriver_SextetStream()
 
 LightsDriver_SextetStream::~LightsDriver_SextetStream()
 {
-	if(IMPL != nullptr)
+	if (IMPL != nullptr)
 	{
 		delete IMPL;
 	}
 }
 
-void LightsDriver_SextetStream::Set(const LightsState *ls)
+void LightsDriver_SextetStream::Set(const LightsState* ls)
 {
-	if(IMPL != nullptr)
+	if (IMPL != nullptr)
 	{
 		IMPL->Set(ls);
 	}
@@ -94,17 +123,17 @@ void LightsDriver_SextetStream::Set(const LightsState *ls)
 REGISTER_LIGHTS_DRIVER_CLASS(SextetStreamToFile);
 
 #if defined(_WINDOWS)
-	#define DEFAULT_OUTPUT_FILENAME "\\\\.\\pipe\\StepMania-Lights-SextetStream"
+#define DEFAULT_OUTPUT_FILENAME "\\\\.\\pipe\\StepMania-Lights-SextetStream"
 #else
-	#define DEFAULT_OUTPUT_FILENAME "Data/StepMania-Lights-SextetStream.out"
+#define DEFAULT_OUTPUT_FILENAME "Data/StepMania-Lights-SextetStream.out"
 #endif
 static Preference<RString> g_sSextetStreamOutputFilename("SextetStreamOutputFilename", DEFAULT_OUTPUT_FILENAME);
 
-inline RageFile * openOutputStream(const RString& filename)
+inline RageFile* openOutputStream(const RString& filename)
 {
-	RageFile * file = new RageFile;
+	RageFile* file = new RageFile;
 
-	if(!file->Open(filename, RageFile::WRITE|RageFile::STREAMED))
+	if (!file->Open(filename, RageFile::WRITE | RageFile::STREAMED))
 	{
 		LOG->Warn("Error opening file '%s' for output: %s", filename.c_str(), file->GetError().c_str());
 		SAFE_DELETE(file);
@@ -114,19 +143,49 @@ inline RageFile * openOutputStream(const RString& filename)
 	return file;
 }
 
+#ifdef WINDOWS
+LightsDriver_SextetStreamToFile::LightsDriver_SextetStreamToFile(HANDLE file)
+{
+	_impl = new Impl(file);
+#elif
 LightsDriver_SextetStreamToFile::LightsDriver_SextetStreamToFile(RageFile * file)
 {
 	_impl = new Impl(file);
+#endif
+
 }
 
-LightsDriver_SextetStreamToFile::LightsDriver_SextetStreamToFile(const RString& filename)
+
+LightsDriver_SextetStreamToFile::LightsDriver_SextetStreamToFile(const RString & filename)
 {
+#ifdef WINDOWS
+	_impl = new Impl(CreateFile(
+		filename,   // pipe name 
+		GENERIC_WRITE,
+		0,              // no sharing 
+		NULL,           // default security attributes
+		OPEN_EXISTING,  // opens existing pipe 
+		0,              // default attributes 
+		NULL));
+#elif
 	_impl = new Impl(openOutputStream(filename));
+#endif
 }
 
 LightsDriver_SextetStreamToFile::LightsDriver_SextetStreamToFile()
 {
+#ifdef WINDOWS
+	_impl = new Impl(CreateFile(
+		g_sSextetStreamOutputFilename.Get(),   // pipe name 
+		GENERIC_WRITE,
+		0,              // no sharing 
+		NULL,           // default security attributes
+		OPEN_EXISTING,  // opens existing pipe 
+		0,              // default attributes 
+		NULL));
+#elif
 	_impl = new Impl(openOutputStream(g_sSextetStreamOutputFilename));
+#endif
 }
 
 /*

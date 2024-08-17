@@ -16,15 +16,15 @@
 
 #include "LightsDriver.h"
 #include "RageFile.h"
-
+#include "Windows.h"
 class LightsDriver_SextetStream : public LightsDriver
 {
 public:
 	LightsDriver_SextetStream();
 	virtual ~LightsDriver_SextetStream();
-	virtual void Set(const LightsState *ls);
+	virtual void Set(const LightsState* ls);
 protected:
-	void * _impl;
+	void* _impl;
 };
 
 class LightsDriver_SextetStreamToFile : public LightsDriver_SextetStream
@@ -35,7 +35,11 @@ public:
 
 	// The file object passed here should already be open, and will be
 	// flushed, closed, and deleted in the destructor.
-	LightsDriver_SextetStreamToFile(RageFile * file);
+#ifdef WINDOWS
+	LightsDriver_SextetStreamToFile(HANDLE file);
+#elif
+	LightsDriver_SextetStreamToFile(RageFile* file);
+#endif
 };
 
 #endif
