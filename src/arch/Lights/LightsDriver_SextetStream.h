@@ -16,7 +16,9 @@
 
 #include "LightsDriver.h"
 #include "RageFile.h"
-#include "Windows.h"
+#ifdef WINDOWS
+	#include "Windows.h"
+#endif
 class LightsDriver_SextetStream : public LightsDriver
 {
 public:
