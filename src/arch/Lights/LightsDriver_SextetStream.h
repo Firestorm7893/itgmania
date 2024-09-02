@@ -39,7 +39,7 @@ public:
 	// flushed, closed, and deleted in the destructor.
 #ifdef WINDOWS
 	LightsDriver_SextetStreamToFile(HANDLE file);
-#elif
+#else
 	LightsDriver_SextetStreamToFile(RageFile* file);
 #endif
 };

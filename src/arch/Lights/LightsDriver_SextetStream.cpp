@@ -27,14 +27,14 @@ namespace
 
 #ifdef WINDOWS
 		HANDLE out;
-#elif
+#else
 		RageFile* out;
 #endif
 
 	public:
 #ifdef WINDOWS
 		Impl(HANDLE file) {
-#elif
+#else
 		Impl(RageFile * file) {
 #endif
 			out = file;
@@ -48,7 +48,7 @@ namespace
 			{
 #ifdef WINDOWS
 				CloseHandle(out);
-#elif
+#else
 				out->Flush();
 				out->Close();
 				SAFE_DELETE(out);
@@ -76,7 +76,7 @@ namespace
 						&cbWritten,             // bytes written 
 						NULL);                  // not overlapped 
 
-#elif
+#else
 					out->Write(buffer, FULL_SEXTET_COUNT);
 					out->Flush();
 #endif
@@ -147,7 +147,7 @@ inline RageFile* openOutputStream(const RString& filename)
 LightsDriver_SextetStreamToFile::LightsDriver_SextetStreamToFile(HANDLE file)
 {
 	_impl = new Impl(file);
-#elif
+#else
 LightsDriver_SextetStreamToFile::LightsDriver_SextetStreamToFile(RageFile * file)
 {
 	_impl = new Impl(file);
@@ -167,7 +167,7 @@ LightsDriver_SextetStreamToFile::LightsDriver_SextetStreamToFile(const RString &
 		OPEN_EXISTING,  // opens existing pipe 
 		0,              // default attributes 
 		NULL));
-#elif
+#else
 	_impl = new Impl(openOutputStream(filename));
 #endif
 }
@@ -183,7 +183,7 @@ LightsDriver_SextetStreamToFile::LightsDriver_SextetStreamToFile()
 		OPEN_EXISTING,  // opens existing pipe 
 		0,              // default attributes 
 		NULL));
-#elif
+#else
 	_impl = new Impl(openOutputStream(g_sSextetStreamOutputFilename));
 #endif
 }
