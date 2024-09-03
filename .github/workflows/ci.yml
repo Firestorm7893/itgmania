@@ -35,7 +35,7 @@ jobs:
         run: cmake -B build
       - name: Build
         run: cmake --build build
-
+  
   macos-build-arm64:
     name: macOS (M1)
     runs-on: macos-latest
@@ -78,6 +78,18 @@ jobs:
       - name: Build
         run: cmake --build build
 
+  release-windows:
+    name: Release Windows
+    runs-on: ubuntu-latest
+    needs: windows-build
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: Windows Build
+    - name: test
+      run: ls -R
+  
   validate-xml-docs:
     name: Validate Lua.xml, LuaDocumentation.xml
     runs-on: ubuntu-latest
